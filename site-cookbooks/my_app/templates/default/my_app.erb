@@ -1,0 +1,29 @@
+upstream <%= node['my_app']['upstream_server_name'] %> {
+  server unix:/tmp/puma.sock fail_timeout=0;
+}
+
+server {
+  listen 80;
+  client_max_body_size <%= node['nginx']['client_max_body_size'] %>;
+  server_name <%= node['my_app']['server_name'] %>;
+
+  keepalive_timeout 5;
+
+  root <%= node['my_app']['site_root'] %>;
+
+  location / {
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header Host $http_host;
+    proxy_redirect off;
+
+    if (!-f $request_filename) {
+      proxy_pass http://<%= node['my_app']['upstream_server_name'] %>;
+      break;
+    }
+  }
+  
+  error_page 500 502 503 504 /500.html;
+  location = /500.html {
+    root <%= node['my_app']['site_root'] %>;
+  }
+}
